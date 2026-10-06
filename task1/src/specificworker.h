@@ -29,6 +29,7 @@
 //#define HIBERNATION_ENABLED
 
 #include <genericworker.h>
+#include <abstract_graphic_viewer/abstract_graphic_viewer.h>
 
 /**
  * \brief Class SpecificWorker implements the core functionality of the component.
@@ -79,12 +80,27 @@ public slots:
      */
 	int startup_check();
 
+	void new_target_slot(QPointF);
+
+       
 private:
 
 	/**
      * \brief Flag indicating whether startup checks are enabled.
      */
 	bool startup_check_flag;
+
+	// graphics
+	QRectF dimensions;
+	AbstractGraphicViewer *viewer;
+	const int ROBOT_LENGTH = 400;
+	QGraphicsItem *robot_polygon;
+
+	//mStateMachine
+	enum class State {FORWARD, TURN};
+	State state = State::FORWARD;
+	std::tuple<float, float> StateMachine(auto points);
+	void draw_lidar(const auto &points, QGraphicsScene* scene);
 
 signals:
 	//void customSignal();
