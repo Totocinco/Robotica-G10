@@ -31,21 +31,6 @@ SpecificWorker::SpecificWorker(const ConfigLoader& configLoader, TuplePrx tprx, 
 			hibernationChecker.start(500);
 		#endif
 		
-		// Example statemachine:
-		/***
-		//Your definition for the statesmachine (if you dont want use a execute function, use nullptr)
-		states["CustomState"] = std::make_unique<GRAFCETStep>("CustomState", period, 
-															std::bind(&SpecificWorker::customLoop, this),  // Cyclic function
-															std::bind(&SpecificWorker::customEnter, this), // On-enter function
-															std::bind(&SpecificWorker::customExit, this)); // On-exit function
-
-		//Add your definition of transitions (addTransition(originOfSignal, signal, dstState))
-		states["CustomState"]->addTransition(states["CustomState"].get(), SIGNAL(entered()), states["OtherState"].get());
-		states["Compute"]->addTransition(this, SIGNAL(customSignal()), states["CustomState"].get()); //Define your signal in the .h file under the "Signals" section.
-
-		//Add your custom state
-		statemachine.addState(states["CustomState"].get());
-		***/
 
 		statemachine.setChildMode(QState::ExclusiveStates);
 		statemachine.start();
@@ -75,6 +60,16 @@ void SpecificWorker::initialize()
     /////////GET PARAMS, OPEND DEVICES....////////
     //int period = configLoader.get<int>("Period.Compute") //NOTE: If you want get period of compute use getPeriod("compute")
     //std::string device = configLoader.get<std::string>("Device.name") 
+
+	this->dimensions = QRectF(-6000, -3000, 12000, 6000);
+	viewer = new AbstractGraphicViewer(this->frame, this->dimensions);
+	this->resize(900,450);
+	viewer->show();
+	const auto rob = viewer->add_robot(ROBOT_LENGTH, ROBOT_LENGTH, 0, 190, QColor("Blue"));
+	robot_polygon = std::get<0>(rob);
+
+	connect(viewer, &AbstractGraphicViewer::new_mouse_coordinates, this, &SpecificWorker::new_target_slot);
+
 }
 
 
@@ -83,20 +78,95 @@ void SpecificWorker::compute()
     fps.print("Compute worker", 3000);
 
 	//computeCODE
-	//try
-	//{
-	//  camera_proxy->getYImage(0,img, cState, bState);
-    //    if (img.empty())
-    //        emit goToEmergency()
-	//  memcpy(image_gray.data, &img[0], m_width*m_height*sizeof(uchar));
-	//  searchTags(image_gray);
-	//}
-	//catch(const Ice::Exception &e)
-	//{
-	//  std::cout << "Error reading from Camera" << e << std::endl;
-	//}
+
+	RoboCompLidar3D::TData data;
+	try
+	{
+		data = lidar3d_proxy->getLidarData("Lidar", 0.f, 2*M_PI, 1);
+		//qInfo() << data.points.size();
+		draw_lidar(data.points, &viewer->scene);
+
+	}
+
+	catch(const Ice::Exception &e){
+		std::cout << "Error reading from Camera" << e << std::endl;
+		return;
+	}
+
+	auto [adv, rot] = StateMachine(data.points);
+	
+
+
+	try{
+		omnirobot_proxy->setSpeedBase(0.0, adv, rot);
+
+	}catch(const Ice::Exception &e){
+
+		std::cerr << e.what() << "\n";
+	}
+
+
 }
 
+
+void SpecificWorker::draw_lidar(const auto &points, QGraphicsScene* scene)
+	
+{
+   static std::vector<QGraphicsItem*> draw_points;
+   for (const auto &p : draw_points)
+   {
+      scene->removeItem(p);
+      delete p;
+   }
+   draw_points.clear();
+
+   const QColor color("LightGreen");
+   const QPen pen(color, 10);
+   //const QBrush brush(color, Qt::SolidPattern);
+   for (const auto &p : points)
+   {
+      const auto dp = scene->addRect(-25, -25, 50, 50, pen);
+      dp->setPos(p.x, p.y);
+      draw_points.push_back(dp);   // add to the list of points to be deleted next time
+   }
+}
+
+
+void SpecificWorker::new_target_slot (QPointF)
+{
+
+}
+
+std::tuple<float, float> SpecificWorker::StateMachine(auto points){
+
+	auto forwardLaser = points[points.size()/2];
+
+	switch(state)
+	{
+		case State::FORWARD:
+
+		std::cout << forwardLaser.distance2d << "SABES QUE SERIA BUENOOOOOOOOOOOOOOOOOO" << std::endl;
+		if(forwardLaser.distance2d < 750)
+		{
+			state = State::TURN;
+			return {0, 0};
+		}
+		return {1000 , 0};
+		break;
+
+		case State::TURN:
+		if(forwardLaser.distance2d > 750)
+		{
+			state=State::FORWARD;
+			return {1000, 0};
+		}
+		return {0, 3};
+		break;
+	}
+	return {0, 0};
+}
+
+////////////////////////////////////////////////////////////////////////////////////
 
 void SpecificWorker::emergency()
 {

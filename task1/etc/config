@@ -1,7 +1,7 @@
 # Proxies for required interfaces
 Proxies.Camera360RGB = "camera360rgb:tcp -h localhost -p 0"
-Proxies.Lidar3D = "lidar3d:tcp -h localhost -p 0"
-Proxies.OmniRobot = "omnirobot:tcp -h localhost -p 0"
+Proxies.Lidar3D = "lidar3d:tcp -h localhost -p 11995"
+Proxies.OmniRobot = "omnirobot:tcp -h localhost -p 10004"
 Proxies.VisualElements = "visualelements:tcp -h localhost -p 0"
 
 
@@ -15,3 +15,4 @@ Ice.Warn.Connections = "0"
 Ice.Trace.Network = "0"
 Ice.Trace.Protocol = "0"
 Ice.MessageSizeMax = "20004800"
+su
