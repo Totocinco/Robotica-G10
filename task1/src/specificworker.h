@@ -24,12 +24,16 @@
 
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
+#define SECURITY_THRESHOLD 500
 
 // If you want to reduce the period automatically due to lack of use, you must uncomment the following line
 //#define HIBERNATION_ENABLED
 
 #include <genericworker.h>
 #include <abstract_graphic_viewer/abstract_graphic_viewer.h>
+#include <ranges>
+#include <random>
+#include <chrono>
 
 /**
  * \brief Class SpecificWorker implements the core functionality of the component.
@@ -95,12 +99,16 @@ private:
 	AbstractGraphicViewer *viewer;
 	const int ROBOT_LENGTH = 400;
 	QGraphicsItem *robot_polygon;
+	float numRand = 0;
+
+	
 
 	//mStateMachine
 	enum class State {FORWARD, TURN};
 	State state = State::FORWARD;
-	std::tuple<float, float> StateMachine(auto points);
+	std::tuple<float, float> StateMachine(const auto &points);
 	void draw_lidar(const auto &points, QGraphicsScene* scene);
+	auto cono(const RoboCompLidar3D::TPoints& points, float minAngle,float maxAngle, float distance);
 
 signals:
 	//void customSignal();
