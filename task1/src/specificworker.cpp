@@ -132,8 +132,7 @@ void SpecificWorker::new_target_slot (QPointF)
 
 }
 
-auto SpecificWorker::cono(const RoboCompLidar3D::TPoints& points, float minAngle,
-                         float maxAngle, float distance)
+auto SpecificWorker::cono(const RoboCompLidar3D::TPoints& points, float minAngle,float maxAngle, float distance)
 {
    return points | std::views::filter([=, this](const auto& point)
    {
@@ -149,27 +148,28 @@ auto SpecificWorker::cono(const RoboCompLidar3D::TPoints& points, float minAngle
 
 std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 {
+	
 	static std::chrono::time_point<std::chrono::system_clock> init;
 	static std::chrono::time_point<std::chrono::system_clock> now;
 	switch(state)
 	{
 		case State::FORWARD:{
 			auto con = cono(points, -0.3, 0.3, 0);
-			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end())
+			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 400)
 				if(min->distance2d < SECURITY_THRESHOLD)
 				{
 					state = State::TURN;
 					// tirar un dado entre 0.4 y 3 
-					numRand = (std::rand() % 4) *1000 ;
+					numRand = (std::rand() % 4) *1000;
 					init = std::chrono::system_clock::now();
 					return {0, 0};
 				}
-		return {500.f, 0.f};
-		break;
-			}
+			return {500.f, 0.f};
+			break;
+		}
 		case State::TURN:{
 			auto con = cono(points, -0.3, 0.3, 0);
-			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end()){
+			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 400){
 			now =std::chrono::high_resolution_clock::now();
 				if(min->distance2d > SECURITY_THRESHOLD + 100 &&   std::chrono::duration_cast<std::chrono::milliseconds>(now - init).count()> numRand/* now - init > dado*/)
 				{
@@ -179,6 +179,13 @@ std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 			}
 		return {0, 0.7};
 		break;
+	}
+	case State:: SPIRAL:{
+				
+	}
+	case State:: WALL:{
+
+
 	}
 }
 	return {0, 0};

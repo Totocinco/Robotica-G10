@@ -100,11 +100,10 @@ private:
 	const int ROBOT_LENGTH = 400;
 	QGraphicsItem *robot_polygon;
 	float numRand = 0;
-
 	
 
 	//mStateMachine
-	enum class State {FORWARD, TURN};
+	enum class State {FORWARD, TURN, SPIRAL, WALL};
 	State state = State::FORWARD;
 	std::tuple<float, float> StateMachine(const auto &points);
 	void draw_lidar(const auto &points, QGraphicsScene* scene);
