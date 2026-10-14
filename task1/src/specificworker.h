@@ -34,6 +34,7 @@
 #include <ranges>
 #include <random>
 #include <chrono>
+#include <cmath>
 
 /**
  * \brief Class SpecificWorker implements the core functionality of the component.
@@ -100,14 +101,16 @@ private:
 	const int ROBOT_LENGTH = 400;
 	QGraphicsItem *robot_polygon;
 	float numRand = 0;
-	
+	float spiral_velocity = 0.0;
+	std::chrono::time_point<std::chrono::system_clock> spiral_time=std::chrono::high_resolution_clock::now();
 
 	//mStateMachine
 	enum class State {FORWARD, TURN, SPIRAL, WALL};
-	State state = State::FORWARD;
+	State state = State::SPIRAL;
 	std::tuple<float, float> StateMachine(const auto &points);
 	void draw_lidar(const auto &points, QGraphicsScene* scene);
 	auto cono(const RoboCompLidar3D::TPoints& points, float minAngle,float maxAngle, float distance);
+	
 
 signals:
 	//void customSignal();
