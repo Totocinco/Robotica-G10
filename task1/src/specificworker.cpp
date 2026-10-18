@@ -155,7 +155,7 @@ std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 	{
 		case State::FORWARD:{
 			auto con = cono(points, -0.3, 0.3, 0);
-			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 390)
+			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 350)
 				if(min->distance2d < SECURITY_THRESHOLD)
 				{
 					state = State::TURN;
@@ -164,28 +164,28 @@ std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 					init = std::chrono::system_clock::now();
 					return {0, 0};
 				}
-			return {1000.f, 0.f};
+			return {movSpeed, 0};
 			break;
 		}
 		//controlador proporcianal
 		case State::TURN:{
 			auto con = cono(points, -0.3, 0.3, 0);
-			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 390){
+			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 350){
 			now =std::chrono::high_resolution_clock::now();
 				if(min->distance2d > SECURITY_THRESHOLD + 100 &&   std::chrono::duration_cast<std::chrono::milliseconds>(now - init).count()> numRand/* now - init > dado*/)
 				{
 					state = State::FORWARD;
-					return {1000, 0};
+					return {movSpeed, 0};
 				}
 			}
-		return {0, 0.7};
+		return {0, rotSpeedFreeroam};
 		break;
 	}
 	case State:: SPIRAL:{
 		auto con = cono(points, -1, 1, 0);
-		if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 390){
+		if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 350){
 			now =std::chrono::high_resolution_clock::now();
-			spiral_velocity = (0.7/(2*M_PI))*0.3*0.3*((std::chrono::duration_cast<std::chrono::milliseconds>(now - spiral_time).count()/1000.0));
+			spiral_velocity = (spiralDiff/(2*M_PI))*rotSpeedSpiral*rotSpeedSpiral*((std::chrono::duration_cast<std::chrono::milliseconds>(now - spiral_time).count()/1000.0));
 			std::cout<<std::chrono::duration_cast<std::chrono::milliseconds>(now - spiral_time).count()<<std::endl;
 			printf("VELOCIDAD ESPIRAL %f BBBBBBBBBBBB\n", spiral_velocity);
 			if(min->distance2d < SECURITY_THRESHOLD + 100)
@@ -197,7 +197,7 @@ std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 				init = std::chrono::system_clock::now();
 				return {0, 0};
 			}
-			return{spiral_velocity*1000,0.5};
+			return{spiral_velocity*1000,rotSpeedSpiral};
 		}	
 	}
 	case State:: WALL:{

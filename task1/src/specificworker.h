@@ -17,6 +17,7 @@
  *    along with RoboComp.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 /**
 	\brief
 	@author authorname
@@ -25,7 +26,10 @@
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
 #define SECURITY_THRESHOLD 500
-
+#define movSpeed 1000
+#define rotSpeedFreeroam 0.7
+#define rotSpeedSpiral 0.75
+#define spiralDiff 0.18
 // If you want to reduce the period automatically due to lack of use, you must uncomment the following line
 //#define HIBERNATION_ENABLED
 
