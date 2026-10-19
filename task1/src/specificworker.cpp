@@ -18,25 +18,25 @@
  */
 #include "specificworker.h"
 
-SpecificWorker::SpecificWorker(const ConfigLoader& configLoader, TuplePrx tprx, bool startup_check) : GenericWorker(configLoader, tprx)
+SpecificWorker::SpecificWorker(const ConfigLoader &configLoader, TuplePrx tprx, bool startup_check) : GenericWorker(configLoader, tprx)
 {
 	this->startup_check_flag = startup_check;
-	if(this->startup_check_flag)
+	if (this->startup_check_flag)
 	{
 		this->startup_check();
 	}
 	else
 	{
-		#ifdef HIBERNATION_ENABLED
-			hibernationChecker.start(500);
-		#endif
-		
+#ifdef HIBERNATION_ENABLED
+		hibernationChecker.start(500);
+#endif
 
 		statemachine.setChildMode(QState::ExclusiveStates);
 		statemachine.start();
 
 		auto error = statemachine.errorString();
-		if (error.length() > 0){
+		if (error.length() > 0)
+		{
 			qWarning() << error;
 			throw error;
 		}
@@ -48,163 +48,287 @@ SpecificWorker::~SpecificWorker()
 	std::cout << "Destroying SpecificWorker" << std::endl;
 }
 
-
 void SpecificWorker::initialize()
 {
-    std::cout << "initialize worker" << std::endl;
+	std::cout << "initialize worker" << std::endl;
 	GenericWorker::initialize();
 
-
-
-    //initializeCODE
-    /////////GET PARAMS, OPEND DEVICES....////////
-    //int period = configLoader.get<int>("Period.Compute") //NOTE: If you want get period of compute use getPeriod("compute")
-    //std::string device = configLoader.get<std::string>("Device.name") 
+	// initializeCODE
+	/////////GET PARAMS, OPEND DEVICES....////////
+	// int period = configLoader.get<int>("Period.Compute") //NOTE: If you want get period of compute use getPeriod("compute")
+	// std::string device = configLoader.get<std::string>("Device.name")
 
 	this->dimensions = QRectF(-6000, -3000, 12000, 6000);
 	viewer = new AbstractGraphicViewer(this->frame, this->dimensions);
-	this->resize(900,450);
+	this->resize(900, 450);
 	viewer->show();
 	const auto rob = viewer->add_robot(ROBOT_LENGTH, ROBOT_LENGTH, 0, 190, QColor("Blue"));
 	robot_polygon = std::get<0>(rob);
 
 	connect(viewer, &AbstractGraphicViewer::new_mouse_coordinates, this, &SpecificWorker::new_target_slot);
-
 }
-
 
 void SpecificWorker::compute()
 {
-    fps.print("Compute worker", 3000);
+	fps.print("Compute worker", 3000);
 
-	//computeCODE
+	// computeCODE
 
 	RoboCompLidar3D::TData data;
 	try
 	{
-		data = lidar3d_proxy->getLidarData("Lidar", 0.f, 2*M_PI, 1);
-		//qInfo() << data.points.size();
+		data = lidar3d_proxy->getLidarData("Lidar", 0.f, 2 * M_PI, 1);
+		// qInfo() << data.points.size();
 		draw_lidar(data.points, &viewer->scene);
-
 	}
 
-	catch(const Ice::Exception &e){
+	catch (const Ice::Exception &e)
+	{
 		std::cout << "Error reading from Camera" << e << std::endl;
 		return;
 	}
 
 	auto [adv, rot] = StateMachine(data.points);
-	
 
-
-	try{ omnirobot_proxy->setSpeedBase(0.0, adv, rot); }
-	catch(const Ice::Exception &e){ std::cerr << e.what() << "\n";}
-
-
+	try
+	{
+		omnirobot_proxy->setSpeedBase(0.0, adv, rot);
+	}
+	catch (const Ice::Exception &e)
+	{
+		std::cerr << e.what() << "\n";
+	}
 }
 
+void SpecificWorker::draw_lidar(const auto &points, QGraphicsScene *scene)
 
-void SpecificWorker::draw_lidar(const auto &points, QGraphicsScene* scene)
-	
 {
-   static std::vector<QGraphicsItem*> draw_points;
-   for (const auto &p : draw_points)
-   {
-      scene->removeItem(p);
-      delete p;
-   }
-   draw_points.clear();
+	static std::vector<QGraphicsItem *> draw_points;
+	for (const auto &p : draw_points)
+	{
+		scene->removeItem(p);
+		delete p;
+	}
+	draw_points.clear();
 
-   const QColor color("LightGreen");
-   const QPen pen(color, 10);
-   //const QBrush brush(color, Qt::SolidPattern);
-   for (const auto &p : points)
-   {
-      const auto dp = scene->addRect(-25, -25, 50, 50, pen);
-      dp->setPos(p.x, p.y);
-      draw_points.push_back(dp);   // add to the list of points to be deleted next time
-   }
+	const QColor color("LightGreen");
+	const QPen pen(color, 10);
+	// const QBrush brush(color, Qt::SolidPattern);
+	for (const auto &p : points)
+	{
+		const auto dp = scene->addRect(-25, -25, 50, 50, pen);
+		dp->setPos(p.x, p.y);
+		draw_points.push_back(dp); // add to the list of points to be deleted next time
+	}
 }
 
-
-void SpecificWorker::new_target_slot (QPointF)
+void SpecificWorker::new_target_slot(QPointF)
 {
-
 }
 
-auto SpecificWorker::cono(const RoboCompLidar3D::TPoints& points, float minAngle,float maxAngle, float distance)
+auto SpecificWorker::cono(const RoboCompLidar3D::TPoints &points, float minAngle, float maxAngle, float distance)
 {
-   return points | std::views::filter([=, this](const auto& point)
-   {
+	return points | std::views::filter([=, this](const auto &point)
+									   {
        bool inAngle = (point.phi > minAngle) and (point.phi < maxAngle);
        if (not inAngle) return false;
 
        if (distance > 0)
-           return (point.distance2d < distance and point.distance2d > this->ROBOT_LENGTH / 2.1);
-       return true;
-   });
+           return (point.distance2d < distance and point.distance2d > this->ROBOT_LENGTH/2.1 );
+       return true; });
 }
-
 
 std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 {
-	
+
 	static std::chrono::time_point<std::chrono::system_clock> init;
 	static std::chrono::time_point<std::chrono::system_clock> now;
-	switch(state)
+	switch (state)
 	{
-		case State::FORWARD:{
-			auto con = cono(points, -0.3, 0.3, 0);
-			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 350)
-				if(min->distance2d < SECURITY_THRESHOLD)
-				{
-					state = State::TURN;
-					// tirar un dado entre 0.4 y 3 
-					numRand = (std::rand() % 4) *1000;
-					init = std::chrono::system_clock::now();
-					return {0, 0};
-				}
-			return {movSpeed, 0};
-			break;
-		}
-		//controlador proporcianal
-		case State::TURN:{
-			auto con = cono(points, -0.3, 0.3, 0);
-			if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 350){
-			now =std::chrono::high_resolution_clock::now();
-				if(min->distance2d > SECURITY_THRESHOLD + 100 &&   std::chrono::duration_cast<std::chrono::milliseconds>(now - init).count()> numRand/* now - init > dado*/)
-				{
-					state = State::FORWARD;
-					return {movSpeed, 0};
-				}
-			}
-		return {0, rotSpeedFreeroam};
-		break;
-	}
-	case State:: SPIRAL:{
-		auto con = cono(points, -1, 1, 0);
-		if(auto min = std::ranges::min_element(con, [](auto &a, auto &b){return a.distance2d < b.distance2d;}); min != con.end() && min->distance2d > 350){
-			now =std::chrono::high_resolution_clock::now();
-			spiral_velocity = (spiralDiff/(2*M_PI))*rotSpeedSpiral*rotSpeedSpiral*((std::chrono::duration_cast<std::chrono::milliseconds>(now - spiral_time).count()/1000.0));
-			std::cout<<std::chrono::duration_cast<std::chrono::milliseconds>(now - spiral_time).count()<<std::endl;
-			printf("VELOCIDAD ESPIRAL %f BBBBBBBBBBBB\n", spiral_velocity);
-			if(min->distance2d < SECURITY_THRESHOLD + 100)
+	case State::FORWARD:
+	{
+		auto con = cono(points, -0.3, 0.3, 0);
+		if (auto min = std::ranges::min_element(con, [](auto &a, auto &b)
+												{ return a.distance2d < b.distance2d; });
+			min != con.end() && min->distance2d > 350)
+			if (min->distance2d < SECURITY_THRESHOLD + 50)
 			{
-				printf("AAAAAAAAAaa cambiamos a TURN AAAAAAAAAA \n");
 				state = State::TURN;
-				// tirar un dado entre 0.4 y 3 
-				numRand = (std::rand() % 4) *1000;
+				// tirar un dado entre 0.4 y 3
+				numRand = (1 + (std::rand() % 4)) * 1000;
 				init = std::chrono::system_clock::now();
 				return {0, 0};
 			}
-			return{spiral_velocity*1000,rotSpeedSpiral};
-		}	
+		return {movSpeed, 0};
+		break;
 	}
-	case State:: WALL:{
+	// controlador proporcianal
+	case State::TURN:
+	{
 
+		auto conIZQ = cono(points, -0.35, -0.1, 0);
+		auto conDER = cono(points, 0.1, 0.35, 0);
+		auto minIZQ = std::ranges::min_element(conIZQ, [](auto &a, auto &b)
+											   { return a.distance2d < b.distance2d; });
+		auto minDER = std::ranges::min_element(conDER, [](auto &a, auto &b)
+											   { return a.distance2d < b.distance2d; });
+		if (minIZQ != conIZQ.end() || minDER != conDER.end())
+		{
 
+			if ((minDER->distance2d >= minIZQ->distance2d && turnLEFT) || turningLEFT)
+			{
+				turningLEFT = true;
+				if (minIZQ->distance2d > 350)
+				{
+					now = std::chrono::high_resolution_clock::now();
+					if (minIZQ->distance2d > SECURITY_THRESHOLD + 150 && std::chrono::duration_cast<std::chrono::milliseconds>(now - init).count() > numRand /* now - init > dado*/)
+					{
+						state = State::FORWARD;
+						turningLEFT = false;
+						return {movSpeed, 0};
+					}
+					float turnLEFT = -1 * rotSpeedFreeroam;
+					return {0, turnLEFT};
+				}
+			}
+			else
+			{
+				turnLEFT = false;
+				if (minDER->distance2d > 350)
+				{
+					now = std::chrono::high_resolution_clock::now();
+					if (minDER->distance2d > SECURITY_THRESHOLD + 150 && std::chrono::duration_cast<std::chrono::milliseconds>(now - init).count() > numRand /* now - init > dado*/)
+					{
+						state = State::FORWARD;
+						turnLEFT = true;
+						return {movSpeed, 0};
+					}
+					return {0, rotSpeedFreeroam};
+				}
+			}
+		}
+		if (turningLEFT)
+		{
+			return {0, -1 * rotSpeedFreeroam};
+		}
+		return {0, rotSpeedFreeroam};
+		break;
 	}
-}
+
+	case State::SPIRAL:
+	{
+		auto con = cono(points, -1, 1, 0);
+		if (auto min = std::ranges::min_element(con, [](auto &a, auto &b)
+												{ return a.distance2d < b.distance2d; });
+			min != con.end() && min->distance2d > 350)
+		{
+			now = std::chrono::high_resolution_clock::now();
+			printf("%f ESTO ES SPIRAL\n", min->distance2d);
+			spiral_velocity = (spiralDiff / (2 * M_PI)) * rotSpeedSpiral * rotSpeedSpiral * ((std::chrono::duration_cast<std::chrono::milliseconds>(now - spiral_time).count() / 1000.0));
+			if (min->distance2d < SECURITY_THRESHOLD + 100)
+			{
+				state = State::TURNWALL;
+				init = std::chrono::system_clock::now();
+				return {0, 0};
+			}
+			return {spiral_velocity * 1000, rotSpeedSpiral};
+		}
+		return {0, 0};
+		break;
+	}
+	case State::TURNWALL:
+	{
+
+		auto conIZQ = cono(points, -0.6, -0.1, 1500);
+		auto conDER = cono(points, 0.1, 0.6, 1500);
+		auto minIZQ = std::ranges::min_element(conIZQ, [](auto &a, auto &b)
+											   { return a.distance2d < b.distance2d; });
+		auto minDER = std::ranges::min_element(conDER, [](auto &a, auto &b)
+											   { return a.distance2d < b.distance2d; });
+		if (minIZQ != conIZQ.end() || minDER != conDER.end())
+		{
+			printf("ESTAMOS EN TURNWALL \n");
+			if ((minDER->distance2d >= minIZQ->distance2d && turnLEFT) || turningLEFT)
+			{
+				turningLEFT = true;
+				printf("%f distancia min", minIZQ->distance2d);
+				if (minIZQ->distance2d > 350)
+				{
+					now = std::chrono::high_resolution_clock::now();
+					printf("%f distancia min", minIZQ->distance2d);
+					if (minIZQ->distance2d > SECURITY_THRESHOLD + 250 && minIZQ->distance2d < SECURITY_THRESHOLD + 600)
+					{
+						if (std::chrono::duration_cast<std::chrono::milliseconds>(now - init).count() > wallTime /* now - init > dado*/)
+						{
+							printf("Salimos \n");
+							state = State::FORWARD;
+							turningLEFT = false;
+							return {movSpeed, 0};
+						}
+						else
+						{
+							state = State::FORWARDWALL;
+							turningLEFT = false;
+							return {movSpeed, 0};
+						}
+					}
+					float turnLEFT = -1 * ((SECURITY_THRESHOLD + 500 - minIZQ->distance2d) / 1000.0);
+					return {0, turnLEFT};
+				}
+			}
+			else
+			{
+				turnLEFT = false;
+				if (minDER->distance2d > 350)
+				{
+					printf("%f distancia min", minDER->distance2d);
+					now = std::chrono::high_resolution_clock::now();
+					if (minDER->distance2d > SECURITY_THRESHOLD + 250 && minDER->distance2d < SECURITY_THRESHOLD + 600)
+					{
+						if (std::chrono::duration_cast<std::chrono::milliseconds>(now - init).count() > wallTime /* now - init > dado*/)
+						{
+							printf("Salimos \n");
+							state = State::FORWARD;
+							return {movSpeed, 0};
+						}
+						else
+						{
+							state = State::FORWARDWALL;
+							return {movSpeed, 0};
+						}
+					}
+
+					return {0, ((SECURITY_THRESHOLD + 500 - minDER->distance2d) / 1000.0)};
+				}
+			}
+		}
+		if (turningLEFT)
+		{
+			return {0, -rotSpeedFreeroam};
+		}
+		return {0, rotSpeedFreeroam};
+		break;
+	}
+	case State::FORWARDWALL:
+	{
+		printf("ESTAMOS EN FORWARDWALL \n");
+		auto con = cono(points, -0.6, 0.6, 1500);
+		if (auto min = std::ranges::min_element(con, [](auto &a, auto &b)
+												{ return a.distance2d < b.distance2d; });
+			min != con.end())
+		{
+			printf("%f", min->distance2d);
+			if (min->distance2d < SECURITY_THRESHOLD - 100 || min->distance2d > SECURITY_THRESHOLD + 600)
+			{
+				printf("%f", min->distance2d);
+				state = State::TURNWALL;
+				return {0, 0};
+			}
+		}
+		return {movSpeed, 0};
+		break;
+	}
+	}
 	return {0, 0};
 }
 
@@ -212,23 +336,20 @@ std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 
 void SpecificWorker::emergency()
 {
-    fps.print("Emergency worker", 3000);
-    //emergencyCODE
-    //
-    //if (SUCCESSFUL) //The componet is safe for continue
-    //  emmit goToRestore()
+	fps.print("Emergency worker", 3000);
+	// emergencyCODE
+	//
+	// if (SUCCESSFUL) //The componet is safe for continue
+	//   emmit goToRestore()
 }
 
-
-//Execute one when exiting to emergencyState
+// Execute one when exiting to emergencyState
 void SpecificWorker::restore()
 {
-    std::cout << "Restore worker" << std::endl;
-    //restoreCODE
-    //Restore emergency component
-
+	std::cout << "Restore worker" << std::endl;
+	// restoreCODE
+	// Restore emergency component
 }
-
 
 int SpecificWorker::startup_check()
 {
@@ -236,8 +357,6 @@ int SpecificWorker::startup_check()
 	QTimer::singleShot(200, QCoreApplication::instance(), SLOT(quit()));
 	return 0;
 }
-
-
 
 /**************************************/
 // From the RoboCompCamera360RGB you can call this methods:
@@ -290,4 +409,3 @@ int SpecificWorker::startup_check()
 // RoboCompVisualElements::TRoi
 // RoboCompVisualElements::TObject
 // RoboCompVisualElements::TObjects
-

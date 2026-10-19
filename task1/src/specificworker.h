@@ -25,11 +25,11 @@
 
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
-#define SECURITY_THRESHOLD 500
-#define movSpeed 1000
+#define SECURITY_THRESHOLD 450
+#define movSpeed 1100
 #define rotSpeedFreeroam 0.7
-#define rotSpeedSpiral 0.75
-#define spiralDiff 0.18
+#define rotSpeedSpiral 1
+#define spiralDiff 0.21
 // If you want to reduce the period automatically due to lack of use, you must uncomment the following line
 //#define HIBERNATION_ENABLED
 
@@ -109,12 +109,14 @@ private:
 	std::chrono::time_point<std::chrono::system_clock> spiral_time=std::chrono::high_resolution_clock::now();
 
 	//mStateMachine
-	enum class State {FORWARD, TURN, SPIRAL, WALL};
+	enum class State {FORWARD, TURN, SPIRAL, FORWARDWALL, TURNWALL};
 	State state = State::SPIRAL;
 	std::tuple<float, float> StateMachine(const auto &points);
 	void draw_lidar(const auto &points, QGraphicsScene* scene);
 	auto cono(const RoboCompLidar3D::TPoints& points, float minAngle,float maxAngle, float distance);
-	
+	bool turnLEFT = true;
+	bool turningLEFT = false;
+	int wallTime = 50000;
 
 signals:
 	//void customSignal();
