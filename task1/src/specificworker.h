@@ -27,7 +27,7 @@
 #define SPECIFICWORKER_H
 #define SECURITY_THRESHOLD 450
 #define movSpeed 1700
-#define rotSpeedFreeroam 0.7
+#define rotSpeedFreeroam 0.9
 #define rotSpeedSpiral 1
 #define spiralDiff 0.25
 // If you want to reduce the period automatically due to lack of use, you must uncomment the following line

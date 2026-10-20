@@ -307,9 +307,9 @@ std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 		}
 		if (turningLEFT)
 		{
-			return {0, -rotSpeedFreeroam};
+			return {-500, -rotSpeedFreeroam};
 		}
-		return {0, rotSpeedFreeroam};
+		return {-500, rotSpeedFreeroam};
 		break;
 	}
 	case State::FORWARDWALL:
