@@ -148,9 +148,10 @@ std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 	case State::FORWARD:
 	{
 		auto con = cono(points, -0.3, 0.3, 0);
-		if (auto min = std::ranges::min_element(con, [](auto &a, auto &b)
-												{ return a.distance2d < b.distance2d; });
-			min != con.end() && min->distance2d > 350)
+		auto min = std::ranges::min_element(con, [](auto &a, auto &b)
+											{ return a.distance2d < b.distance2d; });
+		if (min != con.end() && min->distance2d > 350)
+		{
 			if (min->distance2d < SECURITY_THRESHOLD + 50)
 			{
 				state = State::TURN;
@@ -159,7 +160,9 @@ std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 				init = std::chrono::system_clock::now();
 				return {0, 0};
 			}
-		return {movSpeed, 0};
+			return {movSpeed, 0};
+		}
+		return {-movSpeed, 0};
 		break;
 	}
 	// controlador proporcianal

@@ -26,10 +26,10 @@
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
 #define SECURITY_THRESHOLD 450
-#define movSpeed 1100
+#define movSpeed 1700
 #define rotSpeedFreeroam 0.7
 #define rotSpeedSpiral 1
-#define spiralDiff 0.21
+#define spiralDiff 0.25
 // If you want to reduce the period automatically due to lack of use, you must uncomment the following line
 //#define HIBERNATION_ENABLED
 
@@ -116,7 +116,7 @@ private:
 	auto cono(const RoboCompLidar3D::TPoints& points, float minAngle,float maxAngle, float distance);
 	bool turnLEFT = true;
 	bool turningLEFT = false;
-	int wallTime = 50000;
+	int wallTime = 42000;
 
 signals:
 	//void customSignal();
