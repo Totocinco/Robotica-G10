@@ -92,12 +92,33 @@ void SpecificWorker::compute()
 
 	try
 	{
-		omnirobot_proxy->setSpeedBase(0.0, adv, rot);
+		
+		//omnirobot_proxy->setSpeedBase(0.0, adv, rot);
 	}
 	catch (const Ice::Exception &e)
 	{
 		std::cerr << e.what() << "\n";
 	}
+
+	try
+	{
+		auto frame = camera360rgb_proxy->getROI(-1, -1, -1, -1, -1, -1);
+		
+	}
+	catch (const Ice::Exception &e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+		try
+	{
+		auto data = visualelements_proxy->getVisualObjects(RoboCompVisualElements{});
+		std::cout<<data.bot<<" "<<data.left<<" "<<data.top<<" "<<data.right<<std::endl; 
+	}
+	catch (const Ice::Exception &e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+
 }
 
 void SpecificWorker::draw_lidar(const auto &points, QGraphicsScene *scene)
