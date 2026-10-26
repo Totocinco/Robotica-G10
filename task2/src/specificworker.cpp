@@ -111,8 +111,8 @@ void SpecificWorker::compute()
 	}
 		try
 	{
-		auto data = visualelements_proxy->getVisualObjects(RoboCompVisualElements{});
-		std::cout<<data.bot<<" "<<data.left<<" "<<data.top<<" "<<data.right<<std::endl; 
+		auto data = visualelements_proxy->getVisualObjects(RoboCompVisualElements::TObjects{});
+		std::cout<<data.bottom<<" "<<data.left<<" "<<data.top<<" "<<data.right<<std::endl; 
 	}
 	catch (const Ice::Exception &e)
 	{
