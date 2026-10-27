@@ -109,17 +109,96 @@ void SpecificWorker::compute()
 	{
 		std::cerr << e.what() << "\n";
 	}
+	auto personData = visualelements_proxy->getVisualObjects(RoboCompVisualElements::TObjects{});
+		RoboCompVisualElements::TObject persona = personData.objects.front();
 		try
 	{
-		auto data = visualelements_proxy->getVisualObjects(RoboCompVisualElements::TObjects{});
-		std::cout<<data.bottom<<" "<<data.left<<" "<<data.top<<" "<<data.right<<std::endl; 
+		
+		std::cout<<persona.bot<<" "<<persona.left<<" "<<persona.top<<" "<<persona.right<<std::endl; 
+		QRect roi = QRect(persona.left, persona.top, persona.right - persona.left, persona.bot - persona.top);
+
 	}
 	catch (const Ice::Exception &e)
 	{
 		std::cerr << e.what() << "\n";
 	}
 
+		RoboCompCamera360RGB::TImage imagen;
+
+	try{
+			imagen = camera360rgb_proxy->getROI(0 , 0, 0, 0, 640, 680);
+			double columnas_persona_offset = (persona.right - persona.left)/2 + persona.left - imagen.width/2 ;
+			double angulo_persona = (2.0*M_PI / imagen.width) * columnas_persona_offset;
+			omnirobot_proxy->setSpeedBase(0, 0, -angulo_persona * 1.3); 
+
+	}
+	catch(const Ice::Exception& e)
+	{
+		std::cout << "error en calculo de angulo" << std::endl;
+	}
+
 }
+void draw_image(const RoboCompCamera360RGB::TImage &raw, const QRect &roi)
+{
+    // Wrap the raw RGB image data
+    QImage img(raw.image.data(),
+               raw.width,
+               raw.height,
+               raw.width * 3,
+               QImage::Format_RGB888);
+
+    // Resize to QLabel dimensions
+    //QSize targetSize = label->size();
+
+    QImage resized = img.scaled(
+        //targetSize,
+        Qt::IgnoreAspectRatio,
+        Qt::SmoothTransformation
+    );
+
+    // Scale factors from raw image coordinates to QLabel coordinates
+    double sx = double(resized.width()) / raw.width;
+    double sy = double(resized.height()) / raw.height;
+
+    QPainter painter(&resized);
+
+    // Cosmetic pen: constant 2-pixel width regardless of scaling
+    QPen pen(Qt::red, 2);
+    pen.setCosmetic(true);
+    painter.setPen(pen);
+
+    // Transform coordinates from raw image space to resized image space
+    painter.scale(sx, sy);
+
+    // Draw the person bounding box here (roi param)
+    painter.drawRect(roi);
+
+    /*// Draw projected points
+     pen.setColor(Qt::blue);
+     painter.setPen(pen);
+      for (const auto& pt : projected_points)
+       painter.drawPoint(pt);
+
+
+   // Draw a vertical line at mid-width with thickness proportional to image height
+     const double image_mid_x = raw.width / 2.0;
+     const int vertical_guide_thickness = std::clamp<int>(static_cast<int>(raw.height / 60.0), 2, 12);
+     pen.setColor(Qt::green);
+     pen.setWidth(vertical_guide_thickness);
+      pen.setCosmetic(false);
+      painter.setPen(pen);
+     painter.drawLine(QPointF(image_mid_x, 0.0), QPointF(image_mid_x, raw.height));
+
+
+     // Draw a horizontal line from the closest ROI side to the vertical guide
+     const double roi_mid_y = roi.top() + roi.height() / 2.0;
+
+    */
+    painter.end();
+
+    //label->setPixmap(QPixmap::fromImage(resized));
+}
+
 
 void SpecificWorker::draw_lidar(const auto &points, QGraphicsScene *scene)
 

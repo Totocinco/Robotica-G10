@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>841</width>
+    <height>661</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,6 +22,19 @@
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>640</x>
+        <y>480</y>
+        <width>171</width>
+        <height>111</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Lorem Ipsum</string>
+      </property>
+     </widget>
     </widget>
    </item>
   </layout>
