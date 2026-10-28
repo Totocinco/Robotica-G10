@@ -79,7 +79,7 @@ void SpecificWorker::compute()
 	{
 		data = lidar3d_proxy->getLidarData("Lidar", 0.f, 2 * M_PI, 1);
 		// qInfo() << data.points.size();
-		draw_lidar(data.points, &viewer->scene);
+		
 	}
 
 	catch (const Ice::Exception &e)
@@ -87,7 +87,7 @@ void SpecificWorker::compute()
 		std::cout << "Error reading from Camera" << e << std::endl;
 		return;
 	}
-
+draw_lidar(data.points, &viewer->scene);
 	//auto [adv, rot] = StateMachine(data.points);
 
 	try
@@ -137,7 +137,7 @@ void SpecificWorker::compute()
 	Eigen::Isometry3d cam_transform = Eigen::Isometry3d::Identity();
 	cam_transform.pretranslate(-Eigen::Vector3d{0.f, -170.f, 1275.f});	
 	std::tuple<std::vector<QPointF>, float> res;
-    if(const auto res_ = project_lidar_to_camera(data.points, cam_transform,columnas_persona_offset, imagen, roi); not res_.has_value())
+    if(const auto res_ = project_lidar_to_camera(data.points, cam_transform,angulo_persona, imagen, roi); not res_.has_value())
 	{	qWarning()<< "Error en frame";	return;}
 	else res= res_.value();
 	const auto & [proyected_points, depth] = res;
@@ -145,7 +145,12 @@ void SpecificWorker::compute()
 	
 	// move the robot
 	try
-	{ omnirobot_proxy->setSpeedBase(0, (depth - 1000) * freno(-angulo_persona), -angulo_persona); }
+	{ 
+		if(depth>1000)
+		omnirobot_proxy->setSpeedBase(0, (depth - 1000) * freno(-angulo_persona), -angulo_persona); 
+		else
+		omnirobot_proxy->setSpeedBase(0, 0, -angulo_persona); 
+	}
 	catch(const std::exception& e)
 	{std::cerr << e.what() << '\n';}
 	
@@ -184,6 +189,7 @@ SpecificWorker::project_lidar_to_camera(
 
 
    // filter points based on the specified angle range and distance
+   printf("%f \n", (float) personAngle);
    auto filtered_cone = cono(points, (float)personAngle - 0.3, (float)personAngle + 0.3 , 0);
    if(filtered_cone.empty()) { qWarning() << "Empty cone"; return {};};
 
