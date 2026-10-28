@@ -111,11 +111,13 @@ void SpecificWorker::compute()
 	}
 	auto personData = visualelements_proxy->getVisualObjects(RoboCompVisualElements::TObjects{});
 		RoboCompVisualElements::TObject persona = personData.objects.front();
+		QRect roi;
 		try
 	{
 		
 		std::cout<<persona.bot<<" "<<persona.left<<" "<<persona.top<<" "<<persona.right<<std::endl; 
-		QRect roi = QRect(persona.left, persona.top, persona.right - persona.left, persona.bot - persona.top);
+		roi = QRect(persona.left, persona.top, persona.right - persona.left, persona.bot - persona.top);
+
 
 	}
 	catch (const Ice::Exception &e)
@@ -123,21 +125,119 @@ void SpecificWorker::compute()
 		std::cerr << e.what() << "\n";
 	}
 
-		RoboCompCamera360RGB::TImage imagen;
+	// GET rgb 360
+	RoboCompCamera360RGB::TImage imagen;
+	try{imagen = camera360rgb_proxy->getROI(0 , 0, 0, 0, 640, 680);}catch(const Ice::Exception& e)
+	{std::cout << "error en calculo de angulo" << std::endl;}
+			
+	double columnas_persona_offset = (persona.right - persona.left)/2 + persona.left - imagen.width/2 ;
+	double angulo_persona = (2.0*M_PI / imagen.width) * columnas_persona_offset;
 
-	try{
-			imagen = camera360rgb_proxy->getROI(0 , 0, 0, 0, 640, 680);
-			double columnas_persona_offset = (persona.right - persona.left)/2 + persona.left - imagen.width/2 ;
-			double angulo_persona = (2.0*M_PI / imagen.width) * columnas_persona_offset;
-			omnirobot_proxy->setSpeedBase(0, 0, -angulo_persona * 1.3); 
-
-	}
-	catch(const Ice::Exception& e)
-	{
-		std::cout << "error en calculo de angulo" << std::endl;
-	}
-
+	// get distance to person 
+	Eigen::Isometry3d cam_transform = Eigen::Isometry3d::Identity();
+	cam_transform.pretranslate(-Eigen::Vector3d{0.f, -170.f, 1275.f});	
+	std::tuple<std::vector<QPointF>, float> res;
+    if(const auto res_ = project_lidar_to_camera(data.points, cam_transform,columnas_persona_offset, imagen, roi); not res_.has_value())
+	{	qWarning()<< "Error en frame";	return;}
+	else res= res_.value();
+	const auto & [proyected_points, depth] = res;
+	
+	
+	// move the robot
+	try
+	{ omnirobot_proxy->setSpeedBase(0, (depth - 1000) * freno(-angulo_persona), -angulo_persona); }
+	catch(const std::exception& e)
+	{std::cerr << e.what() << '\n';}
+	
+	      
 }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+RoboCompLidar3D::TPoints SpecificWorker::cono(const RoboCompLidar3D::TPoints& points, float minAngle, float maxAngle, float distance)
+{
+   // Filter points based on the specified angle range and distance
+   auto filtered = points | std::views::filter([=](const auto& point)
+   {
+      return point.phi >= minAngle && point.phi <= maxAngle && point.distance2d > distance;   
+   });
+
+   // Materialize view to vector to match return type RoboCompLidar3D::TPoints
+   return std::ranges::to<RoboCompLidar3D::TPoints>(filtered);
+}
+
+
+float SpecificWorker::freno(double rot)
+{
+	static constexpr float sigma = (-0.5 * -0.5) / std::log(0.3);
+	return std::exp((rot*rot)/sigma); 
+}
+
+std::optional<std::tuple<std::vector<QPointF>, float>>
+SpecificWorker::project_lidar_to_camera(
+                                           const RoboCompLidar3D::TPoints& points,
+                                           const Eigen::Isometry3d& cam_transform,
+                                           double personAngle,
+                                           const RoboCompCamera360RGB::TImage &image,
+                                           const QRect &roi,
+                                           double azimuth_sign,
+                                           double azimuth_offset)
+{
+
+
+   // filter points based on the specified angle range and distance
+   auto filtered_cone = cono(points, (float)personAngle - 0.3, (float)personAngle + 0.3 , 0);
+   if(filtered_cone.empty()) { qWarning() << "Empty cone"; return {};};
+
+
+   std::vector<QPointF> projected_points;
+   projected_points.reserve(points.size());
+   std::vector<float> distances;
+
+
+   for (const auto& lp : filtered_cone)
+   {
+       // Convert Lidar point to Eigen vector
+       Eigen::Vector3d p_lidar(lp.x, lp.y, lp.z);
+
+
+       // Transform point to Camera Local Frame
+       // P_cam = R_inv * (P_lidar - t)
+       Eigen::Vector3d p_cam = cam_transform * p_lidar;
+
+
+       // Equirectangular Projection
+       const double r = p_cam.norm();
+       if (r < 1e-9)
+       {
+           projected_points.emplace_back(image.width / 2.0, image.height / 2.0);
+           continue;
+       }
+
+
+       // Azimuth (u)
+       double u = ((azimuth_sign * std::atan2(p_cam.x(), p_cam.y()) + azimuth_offset) / (2.0 * M_PI) + 0.5) * image.width;
+       u = std::fmod(u, static_cast<double>(image.width));
+       if (u < 0.0) u += image.width;
+
+
+       // Elevation (v)
+       const double v = (std::asin(-p_cam.z() / r) / M_PI + 0.5) * image.height;
+
+
+       // Check if the projected point is within the person's bounding box
+       if (roi.contains(QPoint(u, v)))
+       {
+           projected_points.emplace_back(u, v);
+           distances.push_back(r);
+       }
+   }
+   // compute the minimal depth of the projected points within the bounding box
+   if(distances.empty()) return {};
+   float measured_depth = *std::ranges::min_element(distances);
+
+
+   return std::make_tuple(projected_points, measured_depth);
+}
+
 void draw_image(const RoboCompCamera360RGB::TImage &raw, const QRect &roi)
 {
     // Wrap the raw RGB image data
@@ -226,17 +326,7 @@ void SpecificWorker::new_target_slot(QPointF)
 {
 }
 
-auto SpecificWorker::cono(const RoboCompLidar3D::TPoints &points, float minAngle, float maxAngle, float distance)
-{
-	return points | std::views::filter([=, this](const auto &point)
-									   {
-       bool inAngle = (point.phi > minAngle) and (point.phi < maxAngle);
-       if (not inAngle) return false;
 
-       if (distance > 0)
-           return (point.distance2d < distance and point.distance2d > this->ROBOT_LENGTH/2.1 );
-       return true; });
-}
 
 // std::tuple<float, float> SpecificWorker::StateMachine(const auto &points)
 // {

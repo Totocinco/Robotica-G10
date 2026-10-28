@@ -39,6 +39,7 @@
 #include <random>
 #include <chrono>
 #include <cmath>
+#include <Eigen/Geometry>
 
 /**
  * \brief Class SpecificWorker implements the core functionality of the component.
@@ -113,10 +114,21 @@ private:
 	State state = State::SPIRAL;
 	std::tuple<float, float> StateMachine(const auto &points);
 	void draw_lidar(const auto &points, QGraphicsScene* scene);
-	auto cono(const RoboCompLidar3D::TPoints& points, float minAngle,float maxAngle, float distance);
+	RoboCompLidar3D::TPoints cono(const RoboCompLidar3D::TPoints& points, float minAngle,float maxAngle, float distance);
+	std::optional<std::tuple<std::vector<QPointF>, float>> project_lidar_to_camera(
+                                           const RoboCompLidar3D::TPoints& points,
+                                           const Eigen::Isometry3d& cam_transform,
+                                           double personAngle,
+                                           const RoboCompCamera360RGB::TImage &image,
+                                           const QRect &roi,
+                                           double azimuth_sign = 1.0,
+                                           double azimuth_offset = 0.0);
+	float freno(double rot);
 	bool turnLEFT = true;
 	bool turningLEFT = false;
 	int wallTime = 42000;
+
+	
 
 signals:
 	//void customSignal();
