@@ -33,6 +33,7 @@
 // If you want to reduce the period automatically due to lack of use, you must uncomment the following line
 //#define HIBERNATION_ENABLED
 
+#include "PIDcontroller.h"
 #include <genericworker.h>
 #include <abstract_graphic_viewer/abstract_graphic_viewer.h>
 #include <ranges>
@@ -113,7 +114,6 @@ private:
 	enum class State {FORWARD, TURN, SPIRAL, FORWARDWALL, TURNWALL};
 	State state = State::SPIRAL;
 	std::tuple<float, float> StateMachine(const auto &points);
-	void draw_lidar(const auto &points, QGraphicsScene* scene);
 	RoboCompLidar3D::TPoints cono(const RoboCompLidar3D::TPoints& points, float minAngle,float maxAngle, float distance);
 	std::optional<std::tuple<std::vector<QPointF>, float>> project_lidar_to_camera(
                                            const RoboCompLidar3D::TPoints& points,
@@ -123,6 +123,9 @@ private:
                                            const QRect &roi,
                                            double azimuth_sign = 1.0,
                                            double azimuth_offset = 0.0);
+	void draw_image(const RoboCompCamera360RGB::TImage &raw, const QRect &roi, const std::vector<QPointF> &projected_points,  QLabel *label);
+	void draw_lidar(const auto &points, QGraphicsScene* scene);
+	void draw_person_in_lidar(float person_angle, float distance, QGraphicsScene* scene);
 	float freno(double rot);
 	bool turnLEFT = true;
 	bool turningLEFT = false;
