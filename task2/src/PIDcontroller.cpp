@@ -35,7 +35,7 @@ float PIDcontroller::ajustar_error(float error){
 
     float valor_ajustado = P + I + D;
 
-   printf("%f \n" , valor_ajustado);
+  
     if(valor_ajustado > error_max)
    return error_max;
    return P + I + D;

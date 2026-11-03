@@ -89,7 +89,7 @@ void SpecificWorker::compute()
 	}
     
 	
-	//auto [adv, rot] = StateMachine(data.points);
+	/* //auto [adv, rot] = StateMachine(data.points);
 
 	try
 	{
@@ -99,7 +99,7 @@ void SpecificWorker::compute()
 	catch (const Ice::Exception &e)
 	{
 		std::cerr << e.what() << "\n";
-	}
+	} */
 
 	try
 	{
@@ -110,8 +110,19 @@ void SpecificWorker::compute()
 	{
 		std::cerr << e.what() << "\n";
 	}
-	auto personData = visualelements_proxy->getVisualObjects(RoboCompVisualElements::TObjects{});
-		RoboCompVisualElements::TObject persona = personData.objects.front();
+	RoboCompVisualElements::TObject persona;
+    
+    try{
+    auto personData = visualelements_proxy->getVisualObjects(RoboCompVisualElements::TObjects{});
+    if (personData.objects.empty()) {
+    return; // O maneja el caso en que no hay personas
+}
+	 persona = personData.objects.front();
+    }
+    catch(const Ice::Exception &e){
+        std::cerr << e.what() << "\n";
+        return;
+    }
 		QRect roi;
 		try
 	{
@@ -153,6 +164,7 @@ void SpecificWorker::compute()
 	{ 
 		static PIDcontroller rotacion = PIDcontroller(1.5, 0.01, 0.3, 25);
 		static PIDcontroller velocidad = PIDcontroller(1.5, 0.01, 0.3, 4000 );
+        std::cout<<depth<<std::endl;
         float velAvance = velocidad.ajustar_error(depth - 1000);
 		if(velAvance>0)
 		omnirobot_proxy->setSpeedBase(0, velAvance * freno(-angulo_persona), rotacion.ajustar_error(-angulo_persona)); 
