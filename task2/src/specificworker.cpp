@@ -162,8 +162,8 @@ void SpecificWorker::compute()
 	// move the robot
 	try
 	{ 
-		static PIDcontroller rotacion = PIDcontroller(1.5, 0.01, 0.3, 25);
-		static PIDcontroller velocidad = PIDcontroller(1.5, 0.01, 0.3, 4000 );
+		static PIDcontroller rotacion = PIDcontroller(2, 0.1, 0.6, 25);
+		static PIDcontroller velocidad = PIDcontroller(2, 0.1, 0.6, 4000 );
         std::cout<<depth<<std::endl;
         float velAvance = velocidad.ajustar_error(depth - 1000);
 		if(velAvance>0)

@@ -23,6 +23,7 @@ float PIDcontroller::ajustar_error(float error){
 
    float P = Kp * error;
 
+   
    error_acumulado += error * diff_tiempo;
    float I = Ki * error_acumulado;
 
