@@ -158,7 +158,6 @@ void SpecificWorker::compute()
 	draw_person_in_lidar(angulo_persona, depth, &viewer->scene );
 	draw_lidar(data.points, &viewer->scene);
 
-	
 	// move the robot
 	try
 	{ 
