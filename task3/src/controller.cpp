@@ -1,18 +1,18 @@
-#include "PIDcontroller.h"
+#include "controller.h"
 
-PIDcontroller::PIDcontroller(float Kp, float Ki, float Kd, float error_max){
+controller::controller(float Kp, float Ki, float Kd, float error_max){
     this->Kp = Kp;
     this->Ki = Ki;
     this->Kd = Kd;
     this->error_max = error_max;
 }
-PIDcontroller::~PIDcontroller(){
+controller::~controller(){
     
 }
-unsigned long PIDcontroller::millis(){
+unsigned long controller::millis(){
     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
-float PIDcontroller::ajustar_error(float error){
+float controller::PIDajustar_error(float error){
    if(error > error_max)
    return error_max;
    unsigned long instante_actual = millis();

@@ -162,14 +162,14 @@ void SpecificWorker::compute()
 	// move the robot
 	try
 	{ 
-		static PIDcontroller rotacion = PIDcontroller(1.5, 0.01, 0.3, 25);
-		static PIDcontroller velocidad = PIDcontroller(1.5, 0.01, 0.3, 4000 );
+		static controller rotacion = controller(1.5, 0.01, 0.3, 25);
+		static controller velocidad = controller(1.5, 0.01, 0.3, 4000 );
         std::cout<<depth<<std::endl;
-        float velAvance = velocidad.ajustar_error(depth - 1000);
+        float velAvance = velocidad.PIDajustar_error(depth - 1000);
 		if(velAvance>0)
-		omnirobot_proxy->setSpeedBase(0, velAvance * freno(-angulo_persona), rotacion.ajustar_error(-angulo_persona)); 
+		omnirobot_proxy->setSpeedBase(0, velAvance * freno(-angulo_persona), rotacion.PIDajustar_error(-angulo_persona)); 
 		else
-		omnirobot_proxy->setSpeedBase(0, 0, rotacion.ajustar_error(-angulo_persona)); 
+		omnirobot_proxy->setSpeedBase(0, 0, rotacion.PIDajustar_error(-angulo_persona)); 
 	}
 	catch(const std::exception& e)
 	{std::cerr << e.what() << '\n';}

@@ -1,7 +1,7 @@
 # Sources set
 LIST(APPEND SOURCES
   ../src/specificworker.cpp
-  ../src/PIDcontroller.cpp
+  ../src/controller.cpp
 )
 
 # Headers set
