@@ -48,12 +48,12 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
     std::optional<best_s> best = std::nullopt;
     for(int v = 0; v<=1000; v +=100)
     {
-        for(float w = Wprev - 1; w < Wprev + 1; w = w + 0.1 ) // exactamente 21 posiciones de saltos de 0,1 del Wprev -1 al Wprev + 1
+        for(float w = Wprev - 1; w <= Wprev + 1; w = w + 0.1 ) // exactamente 21 posiciones de saltos de 0,1 del Wprev -1 al Wprev + 1
         {
         if(std::abs(w) > 1.5)
         continue;
 
-        std::tuple<float, float, float, float, bool> res = rollout(v, w, points);;
+        std::tuple<float, float, float, float, bool> res = rollout(v, w, points);
         const auto & [x, y, h, d_min, hit] = res;
         if(hit)
         continue;
