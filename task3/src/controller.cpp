@@ -80,7 +80,6 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
                 best->slow = slow;
             }
         }
-        
         }
     }
     if(!best.has_value()){
@@ -90,17 +89,38 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
     Wprev = best->w;
     return {best->v, best->w};
 }
+//person-> x e y  de la persona
+std::vector<Eigen::Vector2f> controller::obstacle_points(RoboCompLidar3D::TPoints points,const Eigen::Vector2f& person)const{
+    std::vector<Eigen::Vector2f> out;
+    for(RoboCompLidar3D::TPoint point : points){
+        //distancia de la persona y el punto del rallo
+        float distance2D  = std::sqrt(std::pow(point.x - person.x()) + std::pow(point.y - person.y()));
+        if(point.z> Z_MIN){
+            if(point.z < Z_MAX){
+                if(point.distance2d < RANGE_MAX){
+                    if(point.distance2d > SELF_RANGE){
+                        if(distance2D > PERSON_RADIUS){
+                            Eigen::Vector2f aux(point.x,point.y);
+                            out.push_back(aux);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return out;
+}
 
+//Terminar
 std::tuple<float, float, float, float, bool> controller:: rollout (float v, float w,RoboCompLidar3D::TPoints points)
 {
     float x, y, h = 0;
-    //dmin = 1000000;
-
+    float dmin = std::numeric_limits<float>::infinity();
     float dt = 0.1;
 
     for(int i=0; i<20;i++)
     {
-        x= x - v * std::sin(h)*dt;
+        x -= v * std::sin(h)*dt;
         y += v * std::cos(h) * dt;
         h += w * dt;
         for (const auto &q : points)
@@ -108,10 +128,17 @@ std::tuple<float, float, float, float, bool> controller:: rollout (float v, floa
             float dx = x - q.x;
             float dy = y - q.y;
             float d = std::sqrt(dx * dx + dy * dy);
+            if(d < SELF_RANGE && d < q.distance2d){
+                return {0,0,0,0,true};
+            }
+            if(d<dmin){
+                dmin = d;
+            }
         }
     }
+    return { x,y,h,dmin,false};
 }
 
 float COST(float v, float x, float y, float h, float d_min, RoboCompVisualElements::TObject persona){
-
+    
 }

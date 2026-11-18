@@ -153,7 +153,7 @@ void SpecificWorker::compute()
     if(const auto res_ = project_lidar_to_camera(data.points, cam_transform,angulo_persona, imagen, roi); not res_.has_value())
 	{	qWarning()<< "Error en frame";	return;}
 	else res= res_.value();
-	const auto & [proyected_points, depth] = res;
+	const auto & [proyected_points, depth] = res; // depth distancia euy
 	draw_image(imagen, roi, proyected_points, label);
 	draw_person_in_lidar(angulo_persona, depth, &viewer->scene );
 	draw_lidar(data.points, &viewer->scene);
