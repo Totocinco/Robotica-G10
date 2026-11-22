@@ -29,9 +29,9 @@ controller(float Kp, float Ki, float Kd, float error_max);
 ~controller();
 unsigned long millis();
 float PIDajustar_error(float error);
-std::tuple<float, float> DWA (RoboCompVisualElements::TObject persona, RoboCompLidar3D::TPoints points, float depth);
-std::tuple<float, float, float, float, bool> rollout (float v, float w,RoboCompLidar3D::TPoints points);
-float COST(float v, float x, float y, float h, float d_min, RoboCompVisualElements::TObject persona); 
+std::tuple<float, float> DWA (RoboCompVisualElements::TObject persona, RoboCompLidar3D::TPoints points, float depth, Eigen::Vector2f CordPersona);
+std::tuple<float, float, float, float, bool> rollout (float v, float w, std::vector<Eigen::Vector2f>  points, float depth);
+float COST(float v, float x, float y, float h, float d_min, float personax, float personay); 
 std::vector<Eigen::Vector2f> obstacle_points(RoboCompLidar3D::TPoints points,const Eigen::Vector2f& person)const;
 };
 #endif

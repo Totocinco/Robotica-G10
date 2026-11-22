@@ -42,7 +42,7 @@ float controller::PIDajustar_error(float error){
    return P + I + D;
 }
 
-std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona, RoboCompLidar3D::TPoints points, float depth)
+std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona, RoboCompLidar3D::TPoints points, float depth, Eigen::Vector2f CordPersona)
 {
     bool far =  depth > 1100;
     std::optional<best_s> best = std::nullopt;
@@ -53,7 +53,7 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
         if(std::abs(w) > 1.5)
         continue;
 
-        std::tuple<float, float, float, float, bool> res = rollout(v, w, points);
+        std::tuple<float, float, float, float, bool> res = rollout(v, w, obstacle_points(points, CordPersona), depth);
         const auto & [x, y, h, d_min, hit] = res;
         if(hit)
         continue;
@@ -61,7 +61,7 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
         if(v > sqrt(2 * 500 * std::max(d_min - 400, 0.f)))
         continue;
 
-        float cost = COST(v, x, y, h, d_min, persona);
+        float cost = COST(v, x, y, h, d_min, CordPersona.x(), CordPersona.y());
         bool slow = far && v < 150;
 
         if(!best.has_value()){
@@ -94,7 +94,7 @@ std::vector<Eigen::Vector2f> controller::obstacle_points(RoboCompLidar3D::TPoint
     std::vector<Eigen::Vector2f> out;
     for(RoboCompLidar3D::TPoint point : points){
         //distancia de la persona y el punto del rallo
-        float distance2D  = std::sqrt(std::pow(point.x - person.x()) + std::pow(point.y - person.y()));
+        float distance2D  = std::sqrt(std::pow(point.x - person.x() , 2) + std::pow(point.y - person.y() , 2));
         if(point.z> Z_MIN){
             if(point.z < Z_MAX){
                 if(point.distance2d < RANGE_MAX){
@@ -112,9 +112,9 @@ std::vector<Eigen::Vector2f> controller::obstacle_points(RoboCompLidar3D::TPoint
 }
 
 //Terminar
-std::tuple<float, float, float, float, bool> controller:: rollout (float v, float w,RoboCompLidar3D::TPoints points)
+std::tuple<float, float, float, float, bool> controller:: rollout (float v, float w,std::vector<Eigen::Vector2f> points, float depth)
 {
-    float x, y, h = 0;
+    float x = 0.0f, y = 0.0f, h = 0.0f;
     float dmin = std::numeric_limits<float>::infinity();
     float dt = 0.1;
 
@@ -125,10 +125,10 @@ std::tuple<float, float, float, float, bool> controller:: rollout (float v, floa
         h += w * dt;
         for (const auto &q : points)
         {
-            float dx = x - q.x;
-            float dy = y - q.y;
+            float dx = x - q.x();
+            float dy = y - q.y();
             float d = std::sqrt(dx * dx + dy * dy);
-            if(d < SELF_RANGE && d < q.distance2d){
+            if(d < SELF_RANGE && d < depth){
                 return {0,0,0,0,true};
             }
             if(d<dmin){
@@ -139,6 +139,19 @@ std::tuple<float, float, float, float, bool> controller:: rollout (float v, floa
     return { x,y,h,dmin,false};
 }
 
-float COST(float v, float x, float y, float h, float d_min, RoboCompVisualElements::TObject persona){
-    
+float controller::COST(float v, float x, float y, float h, float d_min, float personax, float personay){
+    float gx, gy;
+    gx = personax - x;
+    gy = personay - y;
+
+    float h_ideal = atan2(-gx, gy);
+    float Ch = std::abs(std::remainder(h_ideal - h, 2 * M_PI)) / M_PI;
+
+    float Cd = std::abs(std::sqrt(std::pow(gx , 2) + std::pow(gy , 2)) - 1000) / 2000;
+
+    float Cc = std::pow(std::max(0.f, 1 - (d_min - SELF_RANGE) / 500) , 2);
+
+    float Cv= 1 - v/1000; 
+
+    return Ch + Cd + Cc + Cv; 
 }

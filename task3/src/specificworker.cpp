@@ -161,14 +161,15 @@ void SpecificWorker::compute()
 	// move the robot
 	try
 	{ 
-		static controller rotacion = controller(1.5, 0.01, 0.3, 25);
-		static controller velocidad = controller(1.5, 0.01, 0.3, 4000 );
+		/* static controller rotacion = controller(1.5, 0.01, 0.3, 25);
+		static controller velocidad = controller(1.5, 0.01, 0.3, 4000 ); */
         std::cout<<depth<<std::endl;
-        float velAvance = velocidad.PIDajustar_error(depth - 1000);
-		if(velAvance>0)
-		omnirobot_proxy->setSpeedBase(0, velAvance * freno(-angulo_persona), rotacion.PIDajustar_error(-angulo_persona)); 
-		else
-		omnirobot_proxy->setSpeedBase(0, 0, rotacion.PIDajustar_error(-angulo_persona)); 
+        static controller DWA = controller(0, 0, 0, 0);
+       /*  float velAvance = velocidad.PIDajustar_error(depth - 1000); */
+       Eigen::Vector2f CordPersona(depth * sin(angulo_persona+0.1), depth * cos(angulo_persona));
+        std::tuple<float, float> res = DWA.DWA(persona, data.points, depth, CordPersona);
+        const auto & [v, w] = res;
+		omnirobot_proxy->setSpeedBase(0, v, w); 
 	}
 	catch(const std::exception& e)
 	{std::cerr << e.what() << '\n';}
