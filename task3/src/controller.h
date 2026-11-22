@@ -21,6 +21,8 @@ float cost;
 float v; 
 float w;
 bool slow;
+bool chosen;
+std::vector<Eigen::Vector2f>  points;
 } best_s;
 
 
