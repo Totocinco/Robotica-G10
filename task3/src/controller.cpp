@@ -76,6 +76,8 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
               arcs.at(currentBest).chosen = false;
               currentBest = arcs.size() - 1; 
               arcs.back().chosen = true;
+              arcs.back().cost = cost;
+              arcs.back().slow = slow; 
             }
         }
         }
@@ -119,6 +121,7 @@ std::tuple<float, float, float, float, bool> controller:: rollout (float v, floa
     arc_ arc = {
                 .v = v,
                 .w = w,
+                .chosen = false,
                 .hit = false
             };
     for(int i=0; i<20;i++)
