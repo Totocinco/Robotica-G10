@@ -22,9 +22,10 @@ float v;
 float w;
 bool slow;
 bool chosen;
+bool hit;
 std::vector<Eigen::Vector2f>  points;
-} best_s;
-
+} arc_;
+std::vector<arc_> arcs;
 
 public:
 controller(float Kp, float Ki, float Kd, float error_max);
@@ -35,5 +36,8 @@ std::tuple<float, float> DWA (RoboCompVisualElements::TObject persona, RoboCompL
 std::tuple<float, float, float, float, bool> rollout (float v, float w, std::vector<Eigen::Vector2f>  points, float depth);
 float COST(float v, float x, float y, float h, float d_min, float personax, float personay); 
 std::vector<Eigen::Vector2f> obstacle_points(RoboCompLidar3D::TPoints points,const Eigen::Vector2f& person)const;
+void reset_arcs();
+
 };
+
 #endif

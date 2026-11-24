@@ -45,7 +45,9 @@ float controller::PIDajustar_error(float error){
 std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona, RoboCompLidar3D::TPoints points, float depth, Eigen::Vector2f CordPersona)
 {
     bool far =  depth > 1100;
-    std::optional<best_s> best = std::nullopt;
+    reset_arcs();
+    int currentBest = -1;
+     std::optional<arc_> arc = std::nullopt;
     for(int v = 0; v<=1000; v +=100)
     {
         for(float w = Wprev - 1; w <= Wprev + 1; w = w + 0.1 ) // exactamente 21 posiciones de saltos de 0,1 del Wprev -1 al Wprev + 1
@@ -63,32 +65,29 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
 
         float cost = COST(v, x, y, h, d_min, CordPersona.x(), CordPersona.y());
         bool slow = far && v < 150;
-
-        if(!best.has_value()){
-            best = {
-                .cost = cost,
-                .v = (float)v,
-                .w = w,
-                .slow = slow
-            };
+        if(currentBest == -1 && !arcs.back().hit){
+            arcs.back().chosen = true;
+            arcs.back().cost = cost;
+            arcs.back().slow = slow; 
+            currentBest = arcs.size() - 1; 
         }
         else{
-            if((!slow && best->slow) || (cost < best->cost && slow == best->slow)){
-                best->cost = cost;
-                best->v = v;
-                best->w = w;
-                best->slow = slow;
+            if((!slow && arcs.at(currentBest).slow) || (cost < arcs.at(currentBest).cost && slow == arcs.at(currentBest).slow)){
+              arcs.at(currentBest).chosen = false;
+              currentBest = arcs.size() - 1; 
+              arcs.back().chosen = true;
             }
         }
         }
     }
-    if(!best.has_value()){
+    if(currentBest == -1){
         Wprev = 0;
         return {0, 0};
     }
-    Wprev = best->w;
-    return {best->v, best->w};
+    Wprev = arcs.at(currentBest).w;
+    return {arcs.at(currentBest).v, arcs.at(currentBest).w};
 }
+
 //person-> x e y  de la persona
 std::vector<Eigen::Vector2f> controller::obstacle_points(RoboCompLidar3D::TPoints points,const Eigen::Vector2f& person)const{
     std::vector<Eigen::Vector2f> out;
@@ -117,18 +116,25 @@ std::tuple<float, float, float, float, bool> controller:: rollout (float v, floa
     float x = 0.0f, y = 0.0f, h = 0.0f;
     float dmin = std::numeric_limits<float>::infinity();
     float dt = 0.1;
-
+    arc_ arc = {
+                .v = v,
+                .w = w,
+                .hit = false
+            };
     for(int i=0; i<20;i++)
     {
         x -= v * std::sin(h)*dt;
         y += v * std::cos(h) * dt;
         h += w * dt;
+        arc.points.push_back(Eigen::Vector2f (x , y));
         for (const auto &q : points)
         {
             float dx = x - q.x();
             float dy = y - q.y();
             float d = std::sqrt(dx * dx + dy * dy);
             if(d < SELF_RANGE && d < depth){
+                arc.hit = true;
+                arcs.push_back(arc);
                 return {0,0,0,0,true};
             }
             if(d<dmin){
@@ -136,6 +142,7 @@ std::tuple<float, float, float, float, bool> controller:: rollout (float v, floa
             }
         }
     }
+     arcs.push_back(arc);
     return { x,y,h,dmin,false};
 }
 
@@ -154,4 +161,8 @@ float controller::COST(float v, float x, float y, float h, float d_min, float pe
     float Cv= 1 - v/1000; 
 
     return Ch + Cd + Cc + Cv; 
+}
+
+void controller::reset_arcs(){
+    arcs.clear();
 }
