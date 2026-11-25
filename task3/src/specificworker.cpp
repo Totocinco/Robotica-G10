@@ -55,7 +55,7 @@ void SpecificWorker::initialize()
 
 	// initializeCODE
 	/////////GET PARAMS, OPEND DEVICES....////////
-	// int period = configLoader.get<int>("Period.Compute") //NOTE: If you want get period of compute use getPeriod("compute")
+	// int period = configLoader.get<int>obstacle_points(points, CordPersona)("Period.Compute") //NOTE: If you want get period of compute use getPeriod("compute")
 	// std::string device = configLoader.get<std::string>("Device.name")
 
 	this->dimensions = QRectF(-6000, -3000, 12000, 6000);
@@ -123,23 +123,23 @@ void SpecificWorker::compute()
         std::cerr << e.what() << "\n";
         return;
     }
-		QRect roi;
-		try
-	{
 		
-		std::cout<<persona.bot<<" "<<persona.left<<" "<<persona.top<<" "<<persona.right<<std::endl; 
-		roi = QRect(persona.left, persona.top, persona.right - persona.left, persona.bot - persona.top);
+	 	//try
+	// {
+		
+	// 	std::cout<<persona.bot<<" "<<persona.left<<" "<<persona.top<<" "<<persona.right<<std::endl; 
+ 	QRect roi = QRect(persona.left, persona.top, persona.right - persona.left, persona.bot - persona.top);
 
 
-	}
-	catch (const Ice::Exception &e)
-	{
-		std::cerr << e.what() << "\n";
-	}
+	// }
+	// catch (const Ice::Exception &e)
+	// {
+	// 	std::cerr << e.what() << "\n";
+	// }
 
-	// GET rgb 360
+	//GET rgb 360
 	RoboCompCamera360RGB::TImage imagen;
-	try{imagen = camera360rgb_proxy->getROI(0 , 0, 0, 0, 640, 680);}catch(const Ice::Exception& e)
+	try{imagen = camera360rgb_proxy->getROI(0 , 0, 0, 0, 640, 480);}catch(const Ice::Exception& e)
 	{std::cout << "error en calculo de angulo" << std::endl;}
 			
 	
@@ -167,7 +167,7 @@ void SpecificWorker::compute()
         static controller DWA = controller(0, 0, 0, 0);
        /*  float velAvance = velocidad.PIDajustar_error(depth - 1000); */
        Eigen::Vector2f CordPersona(depth * sin(angulo_persona+0.1), depth * cos(angulo_persona));
-        std::tuple<float, float> res = DWA.DWA(persona, data.points, depth, CordPersona);
+        std::tuple<float, float> res = DWA.DWA(persona, data.points, depth, CordPersona,&viewer->scene );
         const auto & [v, w] = res;
 		omnirobot_proxy->setSpeedBase(0, v, w); 
 	}

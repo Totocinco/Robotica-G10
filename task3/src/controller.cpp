@@ -42,12 +42,13 @@ float controller::PIDajustar_error(float error){
    return P + I + D;
 }
 
-std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona, RoboCompLidar3D::TPoints points, float depth, Eigen::Vector2f CordPersona)
+std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona, RoboCompLidar3D::TPoints points, float depth, Eigen::Vector2f CordPersona, QGraphicsScene* scene)
 {
     bool far =  depth > 1100;
     reset_arcs();
     int currentBest = -1;
      std::optional<arc_> arc = std::nullopt;
+    auto obs = obstacle_points(points, CordPersona);
     for(int v = 0; v<=1000; v +=100)
     {
         for(float w = Wprev - 1; w <= Wprev + 1; w = w + 0.1 ) // exactamente 21 posiciones de saltos de 0,1 del Wprev -1 al Wprev + 1
@@ -55,7 +56,7 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
         if(std::abs(w) > 1.5)
         continue;
 
-        std::tuple<float, float, float, float, bool> res = rollout(v, w, obstacle_points(points, CordPersona), depth);
+        std::tuple<float, float, float, float, bool> res = rollout(v, w , obs, depth);
         const auto & [x, y, h, d_min, hit] = res;
         if(hit)
         continue;
@@ -82,6 +83,8 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
         }
         }
     }
+
+   // draw_arcs(scene);
     if(currentBest == -1){
         Wprev = 0;
         return {0, 0};
@@ -141,7 +144,7 @@ std::tuple<float, float, float, float, bool> controller:: rollout (float v, floa
                 return {0,0,0,0,true};
             }
             if(d<dmin){
-                dmin = d;
+               dmin = d;
             }
         }
     }
@@ -168,4 +171,44 @@ float controller::COST(float v, float x, float y, float h, float d_min, float pe
 
 void controller::reset_arcs(){
     arcs.clear();
+}
+
+void controller::draw_arcs(QGraphicsScene* scene)
+{
+  static std::vector<QGraphicsItem*> draw_points;
+  for (const auto &p : draw_points)
+  {
+     scene->removeItem(p);
+     delete p;
+  }
+  draw_points.clear();
+
+  QColor color;
+  for (const arc_ & arc : arcs)
+  {
+      if (arc.hit)
+      {
+          color = QColor("Red");
+          
+      }
+      else
+      {
+          if (arc.chosen)
+          {
+              color = QColor("Green");
+          }
+          else
+          {
+            color = QColor("Blue");
+          }
+      }
+      QPen pen(color, 10);
+      // const QBrush brush(color, Qt::SolidPattern);
+      for (const Eigen::Vector2f & p : arc.points)
+      {
+          const auto dp = scene->addRect(-25, -25, 50, 50, pen);
+          dp->setPos(p.x(), p.y());
+          draw_points.push_back(dp); // add to the list of points to be deleted next time
+      }
+  }
 }
