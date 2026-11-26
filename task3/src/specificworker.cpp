@@ -101,15 +101,6 @@ void SpecificWorker::compute()
 		std::cerr << e.what() << "\n";
 	} */
 
-	try
-	{
-		auto frame = camera360rgb_proxy->getROI(-1, -1, -1, -1, -1, -1);
-		
-	}
-	catch (const Ice::Exception &e)
-	{
-		std::cerr << e.what() << "\n";
-	}
 	RoboCompVisualElements::TObject persona;
     
     try{
@@ -163,7 +154,6 @@ void SpecificWorker::compute()
 	{ 
 		/* static controller rotacion = controller(1.5, 0.01, 0.3, 25);
 		static controller velocidad = controller(1.5, 0.01, 0.3, 4000 ); */
-        std::cout<<depth<<std::endl;
         static controller DWA = controller(0, 0, 0, 0);
        /*  float velAvance = velocidad.PIDajustar_error(depth - 1000); */
        Eigen::Vector2f CordPersona(depth * sin(angulo_persona+0.1), depth * cos(angulo_persona));

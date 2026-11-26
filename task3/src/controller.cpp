@@ -84,7 +84,7 @@ std::tuple<float, float> controller::DWA(RoboCompVisualElements::TObject persona
         }
     }
 
-   // draw_arcs(scene);
+    draw_arcs(scene);
     if(currentBest == -1){
         Wprev = 0;
         return {0, 0};
@@ -175,40 +175,45 @@ void controller::reset_arcs(){
 
 void controller::draw_arcs(QGraphicsScene* scene)
 {
-  static std::vector<QGraphicsItem*> draw_points;
-  for (const auto &p : draw_points)
-  {
-     scene->removeItem(p);
-     delete p;
-  }
-  draw_points.clear();
+    static std::vector<QGraphicsItem*> draw_points;
+    for (const auto &p : draw_points)
+    {
+        scene->removeItem(p);
+        delete p;
+    }
+    draw_points.clear();
 
-  QColor color;
-  for (const arc_ & arc : arcs)
-  {
-      if (arc.hit)
-      {
-          color = QColor("Red");
-          
-      }
-      else
-      {
-          if (arc.chosen)
-          {
-              color = QColor("Green");
-          }
-          else
-          {
-            color = QColor("Blue");
-          }
-      }
-      QPen pen(color, 10);
-      // const QBrush brush(color, Qt::SolidPattern);
-      for (const Eigen::Vector2f & p : arc.points)
-      {
-          const auto dp = scene->addRect(-25, -25, 50, 50, pen);
-          dp->setPos(p.x(), p.y());
-          draw_points.push_back(dp); // add to the list of points to be deleted next time
-      }
-  }
+    for (const arc_ & arc : arcs)
+    {
+        QColor color;
+        int half_size = 3; 
+        int pen_width = 2;
+        qreal z_val = 1;
+
+        if (arc.hit)
+        {
+            color = QColor(255, 0, 0, 70);    
+        }
+        else if (arc.chosen)
+        {
+            color = QColor(0, 220, 0, 255);    
+            half_size = 10;                    
+            pen_width = 4;
+            z_val = 10;                        
+        }
+        else
+        {
+            color = QColor(0, 100, 255, 70);   
+        }
+
+        QPen pen(color, pen_width);
+        QBrush brush = arc.chosen ? QBrush(color) : Qt::NoBrush; 
+        for (const Eigen::Vector2f & p : arc.points)
+        {
+            const auto dp = scene->addRect(-half_size, -half_size, half_size * 2, half_size * 2, pen, brush);
+            dp->setPos(p.x(), p.y());
+            dp->setZValue(z_val);
+            draw_points.push_back(dp);
+        }
+    }
 }
